@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".PrinterTestActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:subtitle="@string/desc_printer_diagnostic"
+            app:title="@string/printer_diagnostic" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="20dp"
+            tools:context=".PrinterTestActivity">
+
+
+            <!-- Status Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F0F0F0"
+                android:padding="16dp"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Status Hardware Printer:"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvPrinterStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Memeriksa status..."
+                    android:textSize="16sp"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- Tombol - Tombol Pengujian -->
+            <Button
+                android:id="@+id/btnCheckStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Cek Status Printer"
+                android:layout_marginBottom="8dp"/>
+
+            <Button
+                android:id="@+id/btnTestPrintText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Test Print Teks &amp; QR Code"
+                android:layout_marginBottom="8dp"/>
+
+            <Button
+                android:id="@+id/btnTestPrintBitmap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Test Print Gambar (Bitmap Sample)"
+                android:layout_marginBottom="8dp"/>
+
+            <Button
+                android:id="@+id/btnTestCutPaper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Test Potong Kertas (Auto-Cut)"
+                android:backgroundTint="@android:color/holo_orange_dark"
+                android:layout_marginBottom="8dp"/>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+

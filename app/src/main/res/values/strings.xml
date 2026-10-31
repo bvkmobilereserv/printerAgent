@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Printer Agent</string>
+    <string name="desc_app">Android Application Printer Agent for SUNMI</string>
+    <string name="server_control">Server Control</string>
+    <string name="port_number">Port Number</string>
+    <string name="info_server">Info Server\t</string>
+    <string name="stopped">Stopped</string>
+    <string name="copy_address">Copy Address</string>
+    <string name="port_default">8080</string>
+    <string name="queue_printer">Queue Printer Job</string>
+    <string name="something_error">Something Error</string>
+    <string name="icon_file">Icon file queque</string>
+    <string name="printer_diagnostic">Printer Diagnostic</string>
+    <string name="desc_printer_diagnostic">Diagnostic Printer Kiosk Sunmi</string>
+    <string name="hint_ip_address">URL SERVER : -</string>
+    <string name="server_running">Running</string>
+    <string name="try_again">Try again</string>
+    <string name="permission_denied_permanently">Permission denied permanently. Enable it manually in Settings to allow the engine to start.</string>
+    <string name="setting">Setting</string>
+    <string name="permission_required_to_start">Permission is required to start the engine</string>
+</resources>
