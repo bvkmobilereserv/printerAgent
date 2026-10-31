@@ -76,6 +76,9 @@ dependencies {
     //printer lib
     implementation(libs.dantsu.android.printer)
 
-    implementation("com.sunmi:printerlibrary:1.0.18")
+    implementation("com.sunmi:printerlibrary:1.0.24")
+
+    implementation("com.sunmi:printerx:1.0.15")
+
 
 }
