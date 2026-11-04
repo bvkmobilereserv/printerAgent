@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -15,21 +14,30 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import dev.liau.printeragent.databinding.ActivityMainBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.Inet4Address
 import java.net.NetworkInterface
-import java.util.Locale
 
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var printQueueAdapter: PrintQueueAdapter
     private var currentServerUrl: String = ""
     private var portServer :Int = 2212
 
@@ -158,6 +166,69 @@ class MainActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(clip)
         }
 
+        binding.btnClearQueue.setOnClickListener {
+            showClearQueueConfirmationDialog()
+        }
+
+        setupRecyclerView()
+        observePrintQueue()
+    }
+
+    private fun showClearQueueConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.clear_queue))
+            .setMessage("Apakah Anda yakin ingin menghapus semua antrean cetak?")
+            .setPositiveButton("Hapus") { _, _ ->
+                clearPrintQueue()
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun clearPrintQueue() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Hapus semua data antrean dari tabel SQLite
+                val printDao = AppDatabase.getDatabase(applicationContext).printDao()
+                printDao.deleteAllPrints()
+
+                // Hapus file fisik PDF yang tersimpan di pdf_prints
+                val directory = File(filesDir, "pdf_prints")
+                if (directory.exists()) {
+                    directory.listFiles()?.forEach { file ->
+                        file.delete()
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Antrean cetak berhasil dibersihkan", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error clearing print queue", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Gagal menghapus antrean: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun setupRecyclerView() {
+        printQueueAdapter = PrintQueueAdapter()
+        binding.rvqueuePrinter.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = printQueueAdapter
+        }
+    }
+
+    private fun observePrintQueue() {
+        val printDao = AppDatabase.getDatabase(this).printDao()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                printDao.getAllPrints().collect { list ->
+                    printQueueAdapter.submitList(list)
+                }
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

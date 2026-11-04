@@ -46,10 +46,6 @@
                 android:resource="@xml/device_filter" />
         </activity>
 
-        <activity
-            android:name=".PrinterDiag"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
     </application>
 
     <queries>

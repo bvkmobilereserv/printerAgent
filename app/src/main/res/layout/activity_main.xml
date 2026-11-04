@@ -110,10 +110,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/hint_ip_address"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@+id/tvStatusServer" />
@@ -133,18 +133,29 @@
 
             </androidx.cardview.widget.CardView>
 
-
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
-                android:layout_marginVertical="16dp"
-                android:text="@string/queue_printer"
-                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                app:layout_constraintEnd_toStartOf="@+id/toggleServer"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp">
 
+                <TextView
+                    android:layout_weight="5"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/queue_printer"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:textAlignment="textEnd"
+                    android:layout_weight="1"
+                    android:id="@+id/btnClearQueue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clear_queue" />
+
+            </LinearLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/containerError"
@@ -191,7 +202,7 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/queuePrinter"
+                android:id="@+id/rvqueuePrinter"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"

@@ -18,4 +18,5 @@
     <string name="permission_denied_permanently">Permission denied permanently. Enable it manually in Settings to allow the engine to start.</string>
     <string name="setting">Setting</string>
     <string name="permission_required_to_start">Permission is required to start the engine</string>
+    <string name="clear_queue">Clear Queue</string>
 </resources>
