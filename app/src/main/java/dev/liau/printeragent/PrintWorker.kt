@@ -3,14 +3,21 @@ package dev.liau.printeragent
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.sunmi.printerx.enums.Align
+import com.sunmi.printerx.enums.ImageAlgorithm
+import com.sunmi.printerx.style.BaseStyle
+import com.sunmi.printerx.style.BitmapStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-// Sesuaikan import berikut dengan package SDK Sunmi di project Anda
 
 
 class PrintWorker(
@@ -50,7 +57,17 @@ class PrintWorker(
         }
     }
 
-    private fun renderAndPrintPdf(filePath: String): Boolean {
+    private fun scaleBitmapToFitWidth(srcBitmap: Bitmap, targetWidth: Int): Bitmap {
+        if (srcBitmap.width == targetWidth) return srcBitmap // Sudah pas
+
+        // Hitung tinggi proporsional berdasarkan rasio asli gambar
+        val aspectRatio = srcBitmap.height.toFloat() / srcBitmap.width.toFloat()
+        val targetHeight = (targetWidth * aspectRatio).toInt()
+
+        return Bitmap.createScaledBitmap(srcBitmap, targetWidth, targetHeight, true)
+    }
+
+    private suspend fun renderAndPrintPdf(filePath: String): Boolean {
         val file = File(filePath)
         if (!file.exists()) return false
 
@@ -58,33 +75,42 @@ class PrintWorker(
         val pdfRenderer = PdfRenderer(parcelFileDescriptor)
 
         try {
-//            val printer = SdkManager.getInstance().printer
-//            if (printer != null && printer.isOpened) {
-//                printer.init()
-//
-//                for (i in 0 until pdfRenderer.pageCount) {
-//                    val page = pdfRenderer.openPage(i)
-//
-//                    // K2 Mini mendukung lebar 384 dot (58mm) atau 576 dot (80mm)
-//                    val targetWidth = 576
-//                    val targetHeight = (targetWidth.toFloat() / page.width * page.height).toInt()
-//
-//                    val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
-//                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-//
-//                    // Kirim Bitmap ke buffer printer Sunmi[cite: 3, 4]
-//                    printer.startTransBuffer(bitmap.width, bitmap.height)
-//                    printer.printBitmap(0, 0, bitmap)
-//                    printer.endTransBuffer()
-//
-//                    page.close()
-//                }
-//
-//                // Potong kertas otomatis setelah seluruh halaman selesai[cite: 4, 5]
-//                printer.cutPaper(0, 0)
-//                return true
-//            }
-            return false
+            // Di dalam doWork() atau fungsi renderAndPrintPdf di PrintWorker.kt
+            val printerManager = SunmiPrinterManager.getInstance(applicationContext)
+
+            // 1. Query status printer secara langsung untuk memastikan siap
+            val currentStatus = printerManager.queryStatus()
+
+            if (!currentStatus.isReady) {
+                // Jika printer tidak siap, gagalkan pekerjaan worker atau beri pesan error
+                Log.e("PrintWorker", "Printer tidak siap: ${currentStatus.message}")
+                return false
+            }
+
+            for (i in 0 until pdfRenderer.pageCount) {
+                val page = pdfRenderer.openPage(i)
+
+                // K2 Mini mendukung lebar 384 dot (58mm) atau 576 dot (80mm)
+                val targetWidth = 576
+                val targetHeight = (targetWidth.toFloat() / page.width * page.height).toInt()
+
+                val bitmap =
+                    Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                canvas.drawColor(Color.WHITE)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                // 3. Kirim ke printer dengan algoritma Dithering
+                printerManager.printBitmap(
+                    bitmap = bitmap,
+                    style = BitmapStyle.getStyle()
+                        .setAlign(Align.CENTER)
+                        .setAlgorithm(ImageAlgorithm.DITHERING)
+                        .setValue(120),
+                    autoOut = true
+                )
+                page.close()
+            }
+            return true
         } catch (e: Exception) {
             e.printStackTrace()
             return false

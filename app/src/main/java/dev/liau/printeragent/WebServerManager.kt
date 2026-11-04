@@ -7,7 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
+import io.ktor.server.cio.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -27,14 +27,14 @@ data class UploadResponse(
 )
 
 object WebServerManager {
-    private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
-    const val SERVER_PORT = 8080
+    private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
+    var SERVER_PORT :Int = 2212
 
-    fun startServer(context: Context, onStatusChanged: (Boolean, String) -> Unit) {
+    fun startServer(context: Context, port:Int, onStatusChanged: (Boolean, String) -> Unit) {
         if (server != null) return // Server sudah jalan
-
+        SERVER_PORT = port
         try {
-            server = embeddedServer(Netty, port = SERVER_PORT) {
+            server = embeddedServer(CIO, port = SERVER_PORT) {
                 // 1. Pasang Plugin ContentNegotiation dengan Gson
                 install(ContentNegotiation) {
                     gson {
@@ -79,7 +79,7 @@ object WebServerManager {
                     }
                 }
                 routing {
-                    post("/upload-pdf") {
+                    post("/print") {
                         try {
                             val multipart = call.receiveMultipart()
                             var savedPath: String? = null

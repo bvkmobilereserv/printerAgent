@@ -6,7 +6,7 @@
     <string name="info_server">Info Server\t</string>
     <string name="stopped">Stopped</string>
     <string name="copy_address">Copy Address</string>
-    <string name="port_default">8080</string>
+    <string name="port_default">2212</string>
     <string name="queue_printer">Queue Printer Job</string>
     <string name="something_error">Something Error</string>
     <string name="icon_file">Icon file queque</string>

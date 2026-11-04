@@ -80,14 +80,6 @@
                 android:text="Test Print Gambar (Bitmap Sample)"
                 android:layout_marginBottom="8dp"/>
 
-            <Button
-                android:id="@+id/btnTestCutPaper"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Test Potong Kertas (Auto-Cut)"
-                android:backgroundTint="@android:color/holo_orange_dark"
-                android:layout_marginBottom="8dp"/>
-
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>

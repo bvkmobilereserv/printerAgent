@@ -9,6 +9,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
@@ -29,8 +30,8 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var isServerRunning = false
     private var currentServerUrl: String = ""
+    private var portServer :Int = 2212
 
     //permission notification
     private val requestPermissionLauncher = registerForActivityResult(
@@ -82,9 +83,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAndRequestPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-
             val permissionNotification = Manifest.permission.POST_NOTIFICATIONS
-
             when {
                 ContextCompat.checkSelfPermission(this, permissionNotification) == PackageManager.PERMISSION_GRANTED -> {
                    startServer()
@@ -107,6 +106,8 @@ class MainActivity : AppCompatActivity() {
                     requestPermissionLauncher.launch(permissionNotification)
                 }
             }
+        }else{
+            startServer()
         }
     }
 
@@ -120,10 +121,8 @@ class MainActivity : AppCompatActivity() {
                 )
             )
             binding.btnCopy.isEnabled = true
-
-//            val ipAddress = getDeviceIpAddress()
             val ipAddress = getLocalIpAddress()
-            currentServerUrl = "http://$ipAddress:${WebServerManager.SERVER_PORT}"
+            currentServerUrl = "http://$ipAddress:${portServer}"
             binding.tvIpServer.text = "URL: $currentServerUrl"
 
         } else {
@@ -142,8 +141,10 @@ class MainActivity : AppCompatActivity() {
 
     // initiazling the views of the layout
     private fun initViews() {
+        portServer.toString().also {
+            binding.edtInputPort.setText(it)
+        }
         binding.toggleServer.setOnCheckedChangeListener { _, isChecked ->
-
             if(isChecked){
                 checkAndRequestPermissions()
             }else{
@@ -177,7 +178,20 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun startServer(){
-        WebServerManager.startServer(applicationContext) { isRunning, message ->
+        Log.e(TAG, "Starting server...")
+        //validasi input port
+        val inputPort = binding.edtInputPort.text.toString().trim()
+        val portServer = inputPort.toIntOrNull()
+        if (portServer == null || portServer < 1 || portServer > 65535) {
+            Toast.makeText(this, "Masukkan port yang valid (1-65535)", Toast.LENGTH_SHORT).show()
+            binding.toggleServer.setChecked(false)
+            return
+        }
+
+        this.portServer = portServer
+
+
+        WebServerManager.startServer(applicationContext, portServer) { isRunning, message ->
             runOnUiThread {
                 updateServerUI(isRunning)
             }
@@ -192,18 +206,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getDeviceIpAddress(): String {
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val ipsetInt = wifiManager.connectionInfo.ipAddress
-        return String.format(
-            Locale.getDefault(),
-            "%d.%d.%d.%d",
-            (ipsetInt and 0xff),
-            (ipsetInt shr 8 and 0xff),
-            (ipsetInt shr 16 and 0xff),
-            (ipsetInt shr 24 and 0xff)
-        )
-    }
     private fun getLocalIpAddress(): String = try {
         NetworkInterface.getNetworkInterfaces().toList()
             .flatMap { it.inetAddresses.toList() }
@@ -211,5 +213,9 @@ class MainActivity : AppCompatActivity() {
             ?.hostAddress ?: "127.0.0.1"
     } catch (_: Exception) {
         "127.0.0.1"
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }

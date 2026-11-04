@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <uses-permission android:name="com.sunmi.permission.INNER_PRINTER" />
+
     <uses-feature android:name="android.hardware.usb.host" />
 
     <application
@@ -30,17 +32,35 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".PrinterTestActivity"
-            android:exported="false"
+            android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
+
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
+
+        <activity
+            android:name=".PrinterDiag"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
+
+    <queries>
+        <package android:name="woyou.aidlservice.jiuiv5" />
+        <package android:name="com.sunmi.extprinterservice" />
+        <intent>
+            <action android:name="woyou.aidlservice.jiuiv5.IWoyouService" />
+        </intent>
+        <intent>
+            <action android:name="com.sunmi.extprinterservice.PrinterService" />
+        </intent>
+    </queries>
 
 </manifest>

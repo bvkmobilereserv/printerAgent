@@ -1,59 +1,32 @@
 package dev.liau.printeragent
 
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbManager
-import android.os.Build
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.dantsu.escposprinter.connection.usb.UsbPrintersConnections
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.sunmi.printerx.SdkException
+import com.sunmi.printerx.enums.Align
+import com.sunmi.printerx.enums.ImageAlgorithm
+import com.sunmi.printerx.style.BaseStyle
+import com.sunmi.printerx.style.BitmapStyle
+import com.sunmi.printerx.style.QrStyle
+import com.sunmi.printerx.style.TextStyle
 import dev.liau.printeragent.databinding.ActivityPrinterTestBinding
+import kotlinx.coroutines.launch
 
 class PrinterTestActivity : AppCompatActivity() {
-
-    private lateinit var binding: ActivityPrinterTestBinding
-
-    private val usbReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent) {
-            val action = intent.action
-            Log.d(TAG, "onReceive action: $action")
-            if (ACTION_USB_PERMISSION == action) {
-                synchronized(this) {
-                    val usbDevice = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
-                    }
-
-                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                        if (usbDevice != null) {
-                            Log.i(TAG, "USB Permission granted for device: ${usbDevice.deviceName}")
-                            Toast.makeText(
-                                this@PrinterTestActivity,
-                                "USB Permission granted for device: ${usbDevice.deviceName}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                        }
-                    } else {
-                        Log.w(TAG, "USB Permission denied for device: ${usbDevice?.deviceName}")
-                    }
-                }
-            }
-        }
+    private val printerManager by lazy {
+        SunmiPrinterManager.getInstance(this)
     }
+    private lateinit var binding: ActivityPrinterTestBinding
+    private var isReadyPrinter = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,90 +46,176 @@ class PrinterTestActivity : AppCompatActivity() {
             setDisplayShowHomeEnabled(true)
         }
         binding.toolbar.setNavigationOnClickListener { finish() }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                printerManager.status.collect { snapshot ->
+                    isReadyPrinter = snapshot.isReady
 
+                    binding.tvPrinterStatus.text = when (snapshot.state) {
+                        PrinterState.READY -> {
+                            val paperSize = when (snapshot.info?.paper) {
+                                "576" -> "80mm"
+                                "58" -> "58mm" // Contoh jika ada ukuran lain
+                                else -> snapshot.info?.paper ?: "-"
+                            }
+                            "Printer Siap (${snapshot.info?.name ?: "-"} / $paperSize)"
+                        }
+
+                        PrinterState.CHECKING -> "Memeriksa printer..."
+                        PrinterState.ERROR -> "Error: ${snapshot.message}"
+                        PrinterState.UNKNOWN -> "Status tidak diketahui"
+                    }
+                    binding.btnTestPrintText.isEnabled = isReadyPrinter
+                    binding.btnTestPrintBitmap.isEnabled = isReadyPrinter
+                }
+            }
+        }
         setupListeners()
         checkPrinterStatus()
     }
 
     override fun onResume() {
         super.onResume()
-        // Register receiver safely using ContextCompat with export flag for Android 14+
-//        val filter = IntentFilter(ACTION_USB_PERMISSION)
-//        ContextCompat.registerReceiver(
-//            this,
-//            usbReceiver,
-//            filter,
-//            ContextCompat.RECEIVER_NOT_EXPORTED
-//        )
+
     }
 
     override fun onPause() {
         super.onPause()
-        // Unregister receiver to prevent memory leaks
-//        try {
-//            unregisterReceiver(usbReceiver)
-//        } catch (e: IllegalArgumentException) {
-//            Log.w(TAG, "Receiver was not registered: ${e.message}")
-//        }
-    }
-
-
-    private fun checkPrinterUsb(){
-        try {
-            val usbConnection = UsbPrintersConnections.selectFirstConnected(this)
-            val usbManager = getSystemService(Context.USB_SERVICE) as? UsbManager
-
-            if (usbConnection == null || usbManager == null) {
-                AlertDialog.Builder(this)
-                    .setTitle("USB Connection")
-                    .setMessage("No USB printer found.")
-                    .setPositiveButton("OK", null)
-                    .show()
-                return
-            }
-
-            val device = usbConnection.device
-            if (!usbManager.hasPermission(device)) {
-                val intent = Intent(ACTION_USB_PERMISSION).setPackage(packageName)
-                val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                } else {
-                    PendingIntent.FLAG_UPDATE_CURRENT
-                }
-                val permissionIntent = PendingIntent.getBroadcast(this, 0, intent, flags)
-                usbManager.requestPermission(device, permissionIntent)
-            } else {
-                Log.i(TAG, "Already has USB permission for device: ${device.deviceName}")
-            }
-        } catch (e: Exception) {
-            binding.tvPrinterStatus.text = "Error: ${e.localizedMessage}"
-        }
     }
 
 
     private fun checkPrinterStatus() {
-        try {
-             val printerHelper = SunmiPrinterHelper()
-             printerHelper.initPrinter(this)
-             printerHelper.printReceipt(this)
-        } catch (e: Exception) {
-            binding.tvPrinterStatus.text = "Error: ${e.localizedMessage}"
-        }
+        Log.e("checkPrinterStatus", "Ok")
+        printerManager.refreshStatus()
     }
 
     private fun setupListeners() {
         binding.btnCheckStatus.setOnClickListener { checkPrinterStatus() }
         binding.btnTestPrintText.setOnClickListener { testPrintText() }
         binding.btnTestPrintBitmap.setOnClickListener { testPrintBitmap() }
-        binding.btnTestCutPaper.setOnClickListener { testCutPaper() }
     }
 
-    private fun testPrintText() { /* ... */ }
-    private fun testPrintBitmap() { /* ... */ }
-    private fun testCutPaper() { /* ... */ }
+    private fun testPrintText() {
+
+        lifecycleScope.launch {
+            try {
+                // Inisialisasi perataan teks (Tengah)
+                printerManager.initLine(
+                    BaseStyle.getStyle().setAlign(Align.CENTER)
+                )
+
+                // Cetak Judul Struk (AutoOut = false agar kertas belum dipotong)
+                printerManager.printText(
+                    "==============================\n" +
+                            "       BUANA MOBILE DEV       \n" +
+                            "==============================\n\n",
+                    style = TextStyle.getStyle().enableBold(true).setTextSize(28),
+                    autoOut = false
+                )
+
+                // Cetak Baris Tabel / Multi Kolom (Product, Qty, Price)
+                printerManager.printTexts(
+                    texts = arrayOf("Kopi Hitam", "2x", "Rp 30.000"),
+                    widths = intArrayOf(2, 1, 1),
+                    styles = arrayOf(
+                        TextStyle.getStyle().setAlign(Align.LEFT),
+                        TextStyle.getStyle().setAlign(Align.CENTER),
+                        TextStyle.getStyle().setAlign(Align.RIGHT)
+                    ),
+                    autoOut = false
+                )
+
+                // Cetak QR Code Struk & Potong Kertas (AutoOut = true)
+                printerManager.printQrCode(
+                    data = "https://bvk.co.id/",
+                    style = QrStyle.getStyle().setDot(8).setAlign(Align.CENTER),
+                    autoOut = false // Melakukan feed & cut kertas otomatis setelah QR
+                )
+                printerManager.printText(
+                    "-------------------------------\n" +
+                            "            Good Test          \n" +
+                            "-------------------------------\n\n",
+                    style = TextStyle.getStyle().enableBold(true).setTextSize(28),
+                    autoOut = true
+                )
+
+                Toast.makeText(
+                    this@PrinterTestActivity,
+                    "Berhasil mencetak struk!",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+            } catch (e: PrinterException) {
+                // Tangkap exception spesifik printer (misal: kertas habis atau printer disconnected)
+                Toast.makeText(
+                    this@PrinterTestActivity,
+                    "Gagal mencetak: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+    }
+
+    private fun testPrintBitmap() {
+
+        lifecycleScope.launch {
+            try {
+                // Inisialisasi perataan teks (Tengah)
+                printerManager.initLine(
+                    BaseStyle.getStyle().setAlign(Align.CENTER)
+                )
+
+                // Cetak Judul Struk (AutoOut = false agar kertas belum dipotong)
+                printerManager.printText(
+                    "==============================\n" +
+                            "       BUANA MOBILE DEV       \n" +
+                            "==============================\n\n",
+                    style = TextStyle.getStyle().enableBold(true).setTextSize(28),
+                    autoOut = false
+                )
+
+                val optionsBitmapFactory = BitmapFactory.Options()
+                printerManager.printBitmap(
+                    BitmapFactory.decodeResource(
+                        getResources(),
+                        R.mipmap.ic_launcher,
+                        optionsBitmapFactory
+                    ),
+                    BitmapStyle.getStyle()
+                        .setAlign(Align.CENTER).setAlgorithm(ImageAlgorithm.DITHERING).setValue(120)
+                        .setWidth(250).setHeight(200),
+                    false
+                )
+
+                printerManager.printText(
+                    "-------------------------------\n" +
+                            "            Good Test          \n" +
+                            "-------------------------------\n\n",
+                    style = TextStyle.getStyle().enableBold(true).setTextSize(28),
+                    autoOut = true
+                )
+
+                Toast.makeText(
+                    this@PrinterTestActivity,
+                    "Berhasil mencetak gambar!",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+            } catch (e: PrinterException) {
+                // Tangkap exception spesifik printer (misal: kertas habis atau printer disconnected)
+                Toast.makeText(
+                    this@PrinterTestActivity,
+                    "Gagal mencetak: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+    }
 
     companion object {
         private const val TAG = "PrinterTestActivity"
-        const val ACTION_USB_PERMISSION = "dev.liau.printeragent.USB_PERMISSION"
+
     }
 }
